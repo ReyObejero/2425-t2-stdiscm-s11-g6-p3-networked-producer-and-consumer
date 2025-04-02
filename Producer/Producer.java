@@ -1,15 +1,13 @@
 package Producer;
 import java.io.*;
 import java.net.*;
+import java.util.concurrent.*;
 
 public class Producer {
 
-    private String CONSUMER_HOST = "localhost";
-    private int CONSUMER_PORT = 5000;
-
     public static void main(String[] args) {
         // cli input
-        // ex. java Producer 4 videos1 videos2
+        // ex. java Producer 2 videos1 videos2
         if (args.length < 2) {
             System.out.println("Usage: java Producer <nThreads> <dir1> <dir2> ...");
             System.exit(1);
@@ -19,10 +17,53 @@ public class Producer {
             System.out.println("Provide " + numProducers + " directories for producer threads.");
             System.exit(1);
         }
+        ExecutorService executor = Executors.newFixedThreadPool(numProducers);
+        for (int i = 0; i < numProducers; i++) {
+            String folderPath = args[i + 1];
+            executor.submit(new ProducerThread(folderPath));
+        }
+        executor.shutdown();
+    }
+}
+
+class ProducerThread implements Runnable {
+    private String folderPath;
+    private String HOST = "localhost";
+    private int PORT = 5000;
+
+    public ProducerThread(String folderPath) {
+        this.folderPath = folderPath;
+    }
+
+    public void run() {
+        try {
+            File folder = new File(folderPath);
+            if (!folder.exists() || !folder.isDirectory()) {
+                System.err.println("Folder " + folderPath + " does not exist");
+                return;
+            }
+
+            File[] files = folder.listFiles((dir, name) -> {
+                String lower = name.toLowerCase();
+                return lower.endsWith(".mp4") || lower.endsWith(".avi") || lower.endsWith(".mov");
+            });
+
+            if (files == null || files.length == 0) {
+                System.out.println("Empty video files in folder " + folderPath);
+                return;
+            }
+
+            for (File file : files) {
+                sendVideo(file);
+                Thread.sleep(1000);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendVideo(File file) {
-        try (Socket socket = new Socket(CONSUMER_HOST, CONSUMER_PORT);
+        try (Socket socket = new Socket(HOST, PORT);
              DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
              FileInputStream fis = new FileInputStream(file)) {
 
