@@ -8,6 +8,7 @@ import java.util.concurrent.BlockingQueue;
 public class Consumer {
     static int PORT = 5000;
     static BlockingQueue<VideoUpload> uploadQueue;
+    static final String VIDEO_WRITE_DIRECTORY = "uploads";
 
     public static void main(String[] args) {
         int queueCapacity = 10; // default
@@ -27,12 +28,15 @@ public class Consumer {
         }
         
         // Create the upload directory if it does not exist.
-        File uploadDir = new File("uploads");
+        File uploadDir = new File(VIDEO_WRITE_DIRECTORY);
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
         }
 
         uploadQueue = new ArrayBlockingQueue<>(queueCapacity);
+        // VideoWriter monitors the uploadQueue for videos and writes videos to `VIDEO_WRITE_DIRECTORY` path./
+        Thread t2 = new Thread(new VideoWriter());
+        t2.start();
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Consumer server started on port " + PORT);
@@ -47,61 +51,79 @@ public class Consumer {
         }
     }
 
-// sasalo ng vids from Producer, queue is handled with ArrayBlockingQueue
-static class HandleConnection implements Runnable {
-    private Socket socket;
+    // sasalo ng vids from Producer, queue is handled with ArrayBlockingQueue
+    static class HandleConnection implements Runnable {
+        private Socket socket;
 
-    public HandleConnection(Socket socket) {
-        this.socket = socket;
-    }
+        public HandleConnection(Socket socket) {
+            this.socket = socket;
+        }
 
-    public void run() {
-        try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
-            // read file name 
-            String fileName = dis.readUTF();
+        public void run() {
+            try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
+                // read file name 
+                String fileName = dis.readUTF();
 
-            // read file size
-            long fileSize = dis.readLong();
-            
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(); // allows to write into memory
-            byte[] buffer = new byte[4096];
-            long remaining = fileSize;
+                // read file size
+                long fileSize = dis.readLong();
+                
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(); // allows to write into memory
+                byte[] buffer = new byte[4096];
+                long remaining = fileSize;
 
-            int toRead;
-            int read;
+                int toRead;
+                int read;
 
-            while (remaining > 0) {
-                toRead = (int) Math.min(buffer.length, remaining);
-                read = dis.read(buffer, 0, toRead);
+                while (remaining > 0) {
+                    toRead = (int) Math.min(buffer.length, remaining);
+                    read = dis.read(buffer, 0, toRead);
 
-                if (read == -1) {
-                    break;
+                    if (read == -1) {
+                        break;
+                    }
+
+                    baos.write(buffer, 0, read);
+                    remaining -= read;
                 }
 
-                baos.write(buffer, 0, read);
-                remaining -= read;
+                byte[] fileData = baos.toByteArray();
+                VideoUpload upload = new VideoUpload(fileName, fileData);
+
+                // add upload to queue
+                boolean enqueued = uploadQueue.offer(upload);
+
+                if (enqueued) {
+                    System.out.println("Enqueued file: " + fileName);
+                } else {
+                    System.out.println("Queue full. Dropping file: " + fileName); // nMaxQueue+1... is saved to upload queue
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try { socket.close(); } catch (IOException e) { }
             }
-
-            byte[] fileData = baos.toByteArray();
-            VideoUpload upload = new VideoUpload(fileName, fileData);
-
-            // add upload to queue
-            boolean enqueued = uploadQueue.offer(upload);
-
-            if (enqueued) {
-                System.out.println("Enqueued file: " + fileName);
-            } else {
-                System.out.println("Queue full. Dropping file: " + fileName); // nMaxQueue+1... is saved to upload queue
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try { socket.close(); } catch (IOException e) { }
         }
     }
-}
 
+    static class VideoWriter implements Runnable {
+        public void run() {
+            try {
+                while (true) {
+                    VideoUpload queuedVideo = uploadQueue.take();
 
+                    File video = new File(VIDEO_WRITE_DIRECTORY, queuedVideo.fileName);
+                    try (FileOutputStream fos = new FileOutputStream(video)) {
+                        fos.write(queuedVideo.fileData);
+                        System.out.println("Video file saved at " + VIDEO_WRITE_DIRECTORY + "/" + queuedVideo.fileName);
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
  
