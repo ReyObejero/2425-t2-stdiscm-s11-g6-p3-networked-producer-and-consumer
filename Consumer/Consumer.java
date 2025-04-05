@@ -4,6 +4,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Consumer {
     static int PORT = 5000;
@@ -38,16 +40,19 @@ public class Consumer {
         Thread t2 = new Thread(new VideoWriter());
         t2.start();
 
+        ExecutorService executor = Executors.newFixedThreadPool(consumerThreads);
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Consumer server started on port " + PORT);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                
-                Thread t1 = new Thread(new HandleConnection(clientSocket)); // new thread for each connection
-                t1.start();
+
+                executor.submit(new HandleConnection(clientSocket));
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            executor.shutdown();
         }
     }
 
