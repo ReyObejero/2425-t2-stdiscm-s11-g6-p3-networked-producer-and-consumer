@@ -11,8 +11,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 import com.g6.consumer.model.Video;
 
-import jakarta.annotation.PostConstruct;
-
 @SpringBootApplication
 @EnableAsync
 public class ConsumerApplication {
@@ -26,11 +24,6 @@ public class ConsumerApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ConsumerApplication.class, args);
-    }
-
-    @PostConstruct
-    public void logServerStart() {
-        System.out.println("Server is running on http://localhost:" + serverPort);
     }
 }
 
