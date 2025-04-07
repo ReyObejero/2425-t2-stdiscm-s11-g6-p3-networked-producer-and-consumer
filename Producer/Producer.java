@@ -2,6 +2,7 @@ package producer;
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.*;
+import java.security.*;
 
 public class Producer {
 
@@ -66,6 +67,7 @@ class ProducerThread implements Runnable {
         try (Socket socket = new Socket(HOST, PORT);
              DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
              FileInputStream fis = new FileInputStream(file)) {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
 
             // send file name
             String fileName = file.getName();
@@ -79,14 +81,35 @@ class ProducerThread implements Runnable {
             byte[] buffer = new byte[4096];
             int read;
 
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             while ((read = fis.read(buffer)) != -1) {
+                md.update(buffer, 0, read);
+                baos.write(buffer, 0, read);
+            }
+
+            byte[] hashBytes = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+
+            String sha256Hash = sb.toString();
+
+            byte[] fileBytes = baos.toByteArray();
+            ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
+
+            while ((read = bais.read(buffer)) != -1) {
                 dos.write(buffer, 0, read);
             }
+
+            dos.writeUTF(sha256Hash);
 
             dos.flush();
             System.out.println("Uploaded file: " + fileName);
         } catch (IOException e) {
             System.err.println("Failed to upload file: " + file.getName());
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
     }
