@@ -23,11 +23,12 @@ public class SocketConnectionService implements Runnable {
         try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
             String originalFileName = readFileName(dis);
             byte[] fileData = readFileData(dis, dis.readLong());
+            String fileHash = readFileHash(dis);
 
             String fileExtension = getFileExtension(originalFileName);
             String generatedName = generateVideoFileName(fileExtension);
 
-            Video video = new Video(generatedName, fileData);
+            Video video = new Video(generatedName, fileData, fileHash);
 
             enqueueVideo(video);
 
@@ -60,6 +61,10 @@ public class SocketConnectionService implements Runnable {
         return baos.toByteArray();
     }
 
+    private String readFileHash(DataInputStream dis) throws IOException {
+        return dis.readUTF();
+    }
+
     private void enqueueVideo(Video video) {
         boolean enqueued = videoQueue.offer(video);
 
@@ -85,7 +90,6 @@ public class SocketConnectionService implements Runnable {
         return "video_" + timestamp + "_" + uuid + (extension.isEmpty() ? "" : "." + extension);
     }
 
-    // Method to extract the file extension
     private String getFileExtension(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         if (lastDot == -1 || lastDot == fileName.length() - 1) {
