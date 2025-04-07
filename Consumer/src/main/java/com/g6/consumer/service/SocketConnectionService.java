@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
+import java.util.UUID;
 
 import com.g6.consumer.model.Video;
 
@@ -20,11 +21,14 @@ public class SocketConnectionService implements Runnable {
     @Override
     public void run() {
         try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
-            // Read file metadata
-            String fileName = readFileName(dis);
+            String originalFileName = readFileName(dis);
             byte[] fileData = readFileData(dis, dis.readLong());
 
-            Video video = new Video(fileName, fileData);
+            String fileExtension = getFileExtension(originalFileName);
+            String generatedName = generateVideoFileName(fileExtension);
+
+            Video video = new Video(generatedName, fileData);
+
             enqueueVideo(video);
 
         } catch (IOException e) {
@@ -72,5 +76,21 @@ public class SocketConnectionService implements Runnable {
                 socket.close();
             }
         } catch (IOException ignored) {}
+    }
+
+    private String generateVideoFileName(String extension) {
+        long timestamp = System.currentTimeMillis();
+        String uuid = UUID.randomUUID().toString();
+        
+        return "video_" + timestamp + "_" + uuid + (extension.isEmpty() ? "" : "." + extension);
+    }
+
+    // Method to extract the file extension
+    private String getFileExtension(String fileName) {
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot == -1 || lastDot == fileName.length() - 1) {
+            return "";
+        }
+        return fileName.substring(lastDot + 1);
     }
 }
