@@ -105,7 +105,13 @@ class ProducerThread implements Runnable {
             dos.writeUTF(sha256Hash);
 
             dos.flush();
+
             System.out.println("Uploaded file: " + fileName);
+
+            try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
+                String statusMessage = dis.readUTF();
+                System.out.println("Status for file " + fileName + ": " + statusMessage);
+            }
         } catch (IOException e) {
             System.err.println("Failed to upload file: " + file.getName());
             e.printStackTrace();
