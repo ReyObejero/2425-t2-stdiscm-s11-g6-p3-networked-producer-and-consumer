@@ -9,27 +9,25 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.g6.consumer.model.Video;
+import com.g6.consumer.repository.VideoRepository;
 
-import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 @Service
-public class VideoStorageService implements Runnable {
+public class VideoStorageService {
     private final BlockingQueue<Video> videoQueue;
+    private final VideoRepository videoRepository;
+    private boolean running = true;
 
-    public VideoStorageService(BlockingQueue<Video> videoQueue) {
+    public VideoStorageService(BlockingQueue<Video> videoQueue, VideoRepository videoRepository) {
         this.videoQueue = videoQueue;
+        this.videoRepository = videoRepository;
     }
 
-    @PostConstruct
-    public void startVideoStorage() {
-        new Thread(this).start();
-    }
-
-    @Override
     @Async
     public void run() {
         try {
-            while (true) {
+            while (running) {
                 Video video = videoQueue.take();
                 storeVideo(video);
             }
@@ -50,8 +48,15 @@ public class VideoStorageService implements Runnable {
             try (FileOutputStream fos =  new FileOutputStream(videoFile)) {
                 fos.write(video.getFileData());
             }
+            
+            videoRepository.save(video);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @PreDestroy
+    public void stop() {
+        running = false;
     }
 }
