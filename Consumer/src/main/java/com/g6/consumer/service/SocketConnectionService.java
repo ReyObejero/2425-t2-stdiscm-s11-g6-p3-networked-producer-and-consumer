@@ -2,10 +2,11 @@ package com.g6.consumer.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.concurrent.BlockingQueue;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 
 import com.g6.consumer.model.Video;
 
@@ -30,7 +31,7 @@ public class SocketConnectionService implements Runnable {
 
             Video video = new Video(generatedName, fileData, fileHash);
 
-            enqueueVideo(video);
+            sendEnqueueResponse(enqueueVideo(video), video.getFileName());
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,15 +66,21 @@ public class SocketConnectionService implements Runnable {
         return dis.readUTF();
     }
 
-    private void enqueueVideo(Video video) {
-        boolean enqueued = videoQueue.offer(video);
-
-        if (enqueued) {
-            System.out.println("Enqueued file: " + video.getFileName());
-        } else {
-            System.out.println("Queue full. Dropping file: " + video.getFileName());
-        }
+    private boolean enqueueVideo(Video video) {
+        return videoQueue.offer(video);
     }
+
+    private void sendEnqueueResponse(boolean enqueued, String fileName) {
+    try (DataOutputStream dos = new DataOutputStream(socket.getOutputStream())) {
+        if (enqueued) {
+            dos.writeUTF("Successfully uploaded and enqueued: " + fileName);
+        } else {
+            dos.writeUTF("Queue full, unable to enqueue: " + fileName);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
 
     private void closeSocket() {
         try {
