@@ -1,17 +1,111 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Videos</title>
+  <meta charset="UTF-8">
+  <title>Video Gallery</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 60px 20px 40px;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #333;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .video-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1200px;
+      box-sizing: border-box;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .video-group {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+      overflow: hidden;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      justify-items: center;
+    }
+
+    .video-item {
+      text-align: center;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      max-width: 250px;
+      height: auto;
+      border-radius: 6px;
+      background-color: #000;
+    }
+
+    .video-title {
+      font-size: 1rem;
+      margin-top: 8px;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      display: block;
+    }
+
+    .duplicate-marker {
+      font-size: 1.1rem;
+      color: red;
+      font-weight: bold;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      .video-title {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Videos</h1>
-  <div id="videos"></div>
+  <h1>Uploaded Videos</h1>
+  <div id="videos" class="video-container"></div>
 
   <script>
     async function fetchVideos() {
       try {
         const response = await fetch('/api/videos');
         const videoList = await response.json();
+
+        const grouped = {};
+        videoList.forEach(video => {
+          if (!grouped[video.fileHash]) {
+            grouped[video.fileHash] = [];
+          }
+          grouped[video.fileHash].push(video.fileName);
+        });
 
         const container = document.getElementById('videos');
         container.innerHTML = '';
@@ -21,20 +115,67 @@
           return;
         }
 
-        videoList.forEach(filename => {
-          const video = document.createElement('video');
-          video.controls = true;
-          video.src = `/api/videos/${encodeURIComponent(filename)}`;
+        Object.values(grouped).forEach(fileGroup => {
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'video-group';
 
-          const label = document.createElement('p');
-          label.textContent = filename;
+          if (fileGroup.length > 1) {
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'video-grid';
 
-          container.appendChild(label);
-          container.appendChild(video);
+            const mainVideo = document.createElement('div');
+            mainVideo.className = 'video-item';
+            const video = document.createElement('video');
+            video.controls = true;
+            video.src = `/api/videos/${encodeURIComponent(fileGroup[0])}`;
+            const title = document.createElement('div');
+            title.className = 'video-title';
+            title.textContent = fileGroup[0];
+            mainVideo.appendChild(video);
+            mainVideo.appendChild(title);
+            gridDiv.appendChild(mainVideo);
+
+            fileGroup.slice(1).forEach(fileName => {
+              const duplicateItem = document.createElement('div');
+              duplicateItem.className = 'video-item';
+              const duplicateVideo = document.createElement('video');
+              duplicateVideo.controls = true;
+              duplicateVideo.src = `/api/videos/${encodeURIComponent(fileName)}`;
+              const duplicateTitle = document.createElement('div');
+              duplicateTitle.className = 'video-title';
+              duplicateTitle.textContent = fileName;
+              duplicateItem.appendChild(duplicateVideo);
+              duplicateItem.appendChild(duplicateTitle);
+
+              const duplicateMarker = document.createElement('div');
+              duplicateMarker.className = 'duplicate-marker';
+              duplicateMarker.textContent = 'Duplicate';
+              duplicateItem.appendChild(duplicateMarker);
+
+              gridDiv.appendChild(duplicateItem);
+            });
+
+            groupDiv.appendChild(gridDiv);
+          } else {
+            const singleVideoItem = document.createElement('div');
+            singleVideoItem.className = 'video-item';
+            const video = document.createElement('video');
+            video.controls = true;
+            video.src = `/api/videos/${encodeURIComponent(fileGroup[0])}`;
+            const title = document.createElement('div');
+            title.className = 'video-title';
+            title.textContent = fileGroup[0];
+            singleVideoItem.appendChild(video);
+            singleVideoItem.appendChild(title);
+            groupDiv.appendChild(singleVideoItem);
+          }
+
+          container.appendChild(groupDiv);
         });
 
       } catch (error) {
         console.error('Error fetching videos:', error);
+        document.getElementById('videos').textContent = 'Failed to load videos.';
       }
     }
 

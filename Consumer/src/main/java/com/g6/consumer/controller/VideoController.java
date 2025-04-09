@@ -3,10 +3,10 @@ package com.g6.consumer.controller;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -17,21 +17,22 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.g6.consumer.dto.VideoDto;
+import com.g6.consumer.repository.VideoRepository;
+
 @RestController
 @RequestMapping("/api/videos")
 public class VideoController {
     private static final String VIDEO_STORAGE_DIRECTORY = "uploads";
 
+    @Autowired
+    private VideoRepository videoRepository;
     @GetMapping
-    public List<String> listVideos() {
-        File videoStorageDirectory = new File(VIDEO_STORAGE_DIRECTORY);
-        if (!videoStorageDirectory.exists() || !videoStorageDirectory.isDirectory()) {
-            return List.of();
-        }
-
-        return Arrays.stream(videoStorageDirectory.listFiles())
-                     .map(File::getName)
-                     .collect(Collectors.toList());
+    public List<VideoDto> listVideos() {
+        return videoRepository.findAll()
+                .stream()
+                .map(video -> new VideoDto(video.getFileName(), video.getFileHash()))
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{filename}")
