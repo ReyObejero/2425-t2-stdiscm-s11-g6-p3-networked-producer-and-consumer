@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Video Gallery</title>
+  <title>Uploaded Videos</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -133,6 +133,24 @@
     button:hover {
       background-color: #0056b3;
     }
+
+    .video-title {
+      font-size: 1rem;
+      margin-top: 8px;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      display: block;
+      cursor: pointer;
+      transition: color 0.3s, text-decoration 0.3s;
+    }
+
+    .video-title:hover {
+      color: #007bff;
+      text-decoration: underline; 
+    }
   </style>
 </head>
 <body>
@@ -185,10 +203,15 @@
         const video = document.createElement('video');
         video.controls = true;
         video.src = `/api/videos/${encodeURIComponent(fileGroup[0])}`;
+        mainVideo.appendChild(video);
+
         const title = document.createElement('div');
         title.className = 'video-title';
         title.textContent = fileGroup[0];
-        mainVideo.appendChild(video);
+        title.onclick = () => {
+          window.location.href = `/video.html?fileName=${encodeURIComponent(fileGroup[0])}`;
+        };
+
         mainVideo.appendChild(title);
         gridDiv.appendChild(mainVideo);
 
@@ -205,6 +228,11 @@
           const duplicateTitle = document.createElement('div');
           duplicateTitle.className = 'video-title';
           duplicateTitle.textContent = fileName;
+
+          duplicateTitle.onclick = () => {
+            window.location.href = `/video.html?fileName=${encodeURIComponent(fileName)}`;
+          };
+
           duplicateItem.appendChild(duplicateVideo);
           duplicateItem.appendChild(duplicateTitle);
 
@@ -239,35 +267,35 @@
     }
   }
 
-    document.getElementById('executorForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
+  document.getElementById('executorForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
 
-      const consumerThreads = document.getElementById('consumerThreads').value;
-      const storeQueueCapacity = document.getElementById('storeQueueCapacity').value;
+    const consumerThreads = document.getElementById('consumerThreads').value;
+    const storeQueueCapacity = document.getElementById('storeQueueCapacity').value;
 
-      const payload = {
-        consumerThreads,
-        storeQueueCapacity,
-      };
+    const payload = {
+      consumerThreads,
+      storeQueueCapacity,
+    };
 
-      try {
-        const response = await fetch('/executor/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
+    try {
+      const response = await fetch('/executor/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-        const result = await response.json();
-        alert(result.message);
-      } catch (error) {
-        console.error('Error updating parameters:', error);
-        alert('Failed to update parameters.');
-      }
-    });
+      const result = await response.json();
+      alert(result.message);
+    } catch (error) {
+      console.error('Error updating parameters:', error);
+      alert('Failed to update parameters.');
+    }
+  });
 
-    fetchVideos();
-  </script>
+  fetchVideos();
+</script>
 </body>
 </html>

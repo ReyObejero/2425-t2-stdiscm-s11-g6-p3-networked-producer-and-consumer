@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    video {
+      max-width: 100%;
+      max-height: 80vh;
+      cursor: pointer;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .video-title {
+      font-size: 1.2rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Video Player</h1>
+  <video id="video" muted playsinline preload="metadata"></video>
+  <div id="title" class="video-title"></div>
+
+  <script>
+    let timeoutId;
+    let controlsShown = false;
+
+    async function fetchVideo() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fileName = urlParams.get('fileName');
+
+      if (!fileName) {
+        alert("No video file specified.");
+        return;
+      }
+
+      try {
+        const videoElement = document.getElementById('video');
+        const titleElement = document.getElementById('title');
+        videoElement.src = `/api/videos/${encodeURIComponent(fileName)}`;
+        titleElement.textContent = fileName;
+
+        videoElement.addEventListener('mouseenter', () => {
+          if (controlsShown) return; 
+          videoElement.currentTime = 0;
+          videoElement.play();
+
+          const maxDuration = Math.min(10, videoElement.duration || 10);
+          timeoutId = setTimeout(() => {
+            videoElement.pause();
+          }, maxDuration * 1000);
+        });
+
+        videoElement.addEventListener('mouseleave', () => {
+          if (controlsShown) return; 
+          clearTimeout(timeoutId);
+          videoElement.pause();
+          videoElement.currentTime = 0;
+        });
+
+        videoElement.addEventListener('click', () => {
+          if (!controlsShown) {
+            videoElement.setAttribute('controls', 'true');
+            videoElement.pause(); 
+            videoElement.currentTime = 0;
+            videoElement.play(); 
+            controlsShown = true;
+          }
+        });
+
+      } catch (error) {
+        console.error("Error loading video:", error);
+        alert("Error loading video.");
+      }
+    }
+
+    fetchVideo();
+  </script>
+
+</body>
+</html>
