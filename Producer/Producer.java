@@ -7,8 +7,6 @@ import java.security.*;
 public class Producer {
 
     public static void main(String[] args) {
-        // cli input
-        // ex. java Producer 2 videos1 videos2
         if (args.length < 2) {
             System.out.println("Usage: java Producer <nThreads> <dir1> <dir2> ...");
             System.exit(1);
@@ -69,15 +67,15 @@ class ProducerThread implements Runnable {
              FileInputStream fis = new FileInputStream(file)) {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            // send file name
+            // Send file name
             String fileName = file.getName();
             dos.writeUTF(fileName);
 
-            // send file size
+            // Send file size
             long fileSize = file.length();
             dos.writeLong(fileSize);
 
-            // send file bytes
+            // Send file bytes
             byte[] buffer = new byte[4096];
             int read;
 
@@ -93,6 +91,7 @@ class ProducerThread implements Runnable {
                 sb.append(String.format("%02x", b));
             }
 
+            // Send file hash
             String sha256Hash = sb.toString();
 
             byte[] fileBytes = baos.toByteArray();
@@ -108,6 +107,7 @@ class ProducerThread implements Runnable {
 
             System.out.println("Uploaded file: " + fileName);
 
+            // Receive upload response from consumer
             try (DataInputStream dis = new DataInputStream(socket.getInputStream())) {
                 String statusMessage = dis.readUTF();
                 System.out.println("Status for file " + fileName + ": " + statusMessage);
