@@ -29,7 +29,7 @@ public class Producer {
 
 class ProducerThread implements Runnable {
     private String folderPath;
-    private String HOST = "localhost";
+    private String HOST = "spring-consumer";
     private int PORT = 5000;
 
     public ProducerThread(String folderPath) {
