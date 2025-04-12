@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  consumer-app:
+    build:
+      context: ./consumer
+    container_name: spring-consumer
+    ports:
+      - "8080:8080"
+      - "5000:5000"
+    networks:
+      - spring-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+
+networks:
+  spring-net:
+    driver: bridge
