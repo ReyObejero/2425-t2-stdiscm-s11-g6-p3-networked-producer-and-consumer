@@ -23,7 +23,7 @@ import com.g6.consumer.repository.VideoRepository;
 @RestController
 @RequestMapping("/api/videos")
 public class VideoController {
-    private static final String VIDEO_STORAGE_DIRECTORY = "uploads";
+    private static final String VIDEO_STORAGE_DIRECTORY = "datastore/videos";
 
     @Autowired
     private VideoRepository videoRepository;
